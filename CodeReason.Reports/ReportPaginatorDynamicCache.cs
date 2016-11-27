@@ -17,59 +17,57 @@ using System.Windows.Documents;
 namespace CodeReason.Reports
 {
     /// <summary>
-    /// Dynamic cache class for report paginator
+    ///     Dynamic cache class for report paginator
     /// </summary>
     public class ReportPaginatorDynamicCache
     {
-        private FlowDocument _flowDocument;
-        /// <summary>
-        /// Gets the associacted flow document
-        /// </summary>
-        public FlowDocument FlowDocument
-        {
-            get { return _flowDocument; }
-        }
+        private readonly Dictionary<Type, ArrayList> _documentByInterface = new Dictionary<Type, ArrayList>();
 
-        private Dictionary<Type, ArrayList> _documentByType = new Dictionary<Type, ArrayList>();
-        private Dictionary<Type, ArrayList> _documentByInterface = new Dictionary<Type, ArrayList>();
+        private readonly Dictionary<Type, ArrayList> _documentByType = new Dictionary<Type, ArrayList>();
 
         /// <summary>
-        /// Constructor
+        ///     Constructor
         /// </summary>
         /// <param name="flowDocument">flow document</param>
         public ReportPaginatorDynamicCache(FlowDocument flowDocument)
         {
-            _flowDocument = flowDocument;
+            FlowDocument = flowDocument;
 
             BuildCache();
         }
 
         /// <summary>
-        /// Build cache
+        ///     Gets the associacted flow document
+        /// </summary>
+        public FlowDocument FlowDocument { get; private set; }
+
+        /// <summary>
+        ///     Build cache
         /// </summary>
         private void BuildCache()
         {
-            DocumentWalker walker = new DocumentWalker();
+            var walker = new DocumentWalker();
             walker.VisualVisited += WalkerVisualVisited;
-            walker.Walk(_flowDocument);
+            walker.Walk(FlowDocument);
         }
 
         private void WalkerVisualVisited(object sender, object visitedObject, bool start)
         {
             if (visitedObject == null) return;
-            Type type = visitedObject.GetType();
+            var type = visitedObject.GetType();
             if (!_documentByType.ContainsKey(type)) _documentByType[type] = new ArrayList();
             _documentByType[type].Add(visitedObject);
 
-            foreach (Type interfaceType in type.GetInterfaces())
+            foreach (var interfaceType in type.GetInterfaces())
             {
-                if (!_documentByInterface.ContainsKey(interfaceType)) _documentByInterface[interfaceType] = new ArrayList();
+                if (!_documentByInterface.ContainsKey(interfaceType))
+                    _documentByInterface[interfaceType] = new ArrayList();
                 _documentByInterface[interfaceType].Add(visitedObject);
             }
         }
 
         /// <summary>
-        /// Gets an ArrayList of all document visual object of a specific type
+        ///     Gets an ArrayList of all document visual object of a specific type
         /// </summary>
         /// <param name="type">type of document visual object</param>
         /// <returns>empty ArrayList, if type does not exist</returns>
@@ -81,7 +79,7 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Gets an ArrayList of all document visual object of a specific interface
+        ///     Gets an ArrayList of all document visual object of a specific interface
         /// </summary>
         /// <param name="type">type of document visual object</param>
         /// <returns>empty ArrayList, if type does not exist</returns>

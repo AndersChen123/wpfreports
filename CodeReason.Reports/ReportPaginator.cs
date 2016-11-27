@@ -26,27 +26,16 @@ using CodeReason.Reports.Interfaces;
 namespace CodeReason.Reports
 {
     /// <summary>
-    /// Creates all pages of a report
+    ///     Creates all pages of a report
     /// </summary>
     public class ReportPaginator : DocumentPaginator
     {
-        // ReSharper disable InconsistentNaming
-        /// <summary>
-        /// Reference to a original flowdoc paginator
-        /// </summary>
-        protected DocumentPaginator _paginator;
+        private int _pageCount;
 
-        protected FlowDocument _flowDocument;
-        protected ReportDocument _report;
-        protected ReportData _data;
-        protected Block _blockPageHeader;
-        protected Block _blockPageFooter;
-        protected ArrayList _reportContextValues;
-        protected ReportPaginatorDynamicCache _dynamicCache;
-        // ReSharper restore InconsistentNaming
+        private Size _pageSize = Size.Empty;
 
         /// <summary>
-        /// Constructor
+        ///     Constructor
         /// </summary>
         /// <param name="report">report document</param>
         /// <param name="data">report data</param>
@@ -62,26 +51,31 @@ namespace CodeReason.Reports
             _flowDocument = report.CreateFlowDocument(data.ReportImages);
             _pageSize = new Size(_flowDocument.PageWidth, _flowDocument.PageHeight);
 
-            if (_flowDocument.PageHeight == double.NaN) throw new ArgumentException("Flow document must have a specified page height");
-            if (_flowDocument.PageWidth == double.NaN) throw new ArgumentException("Flow document must have a specified page width");
+            if (_flowDocument.PageHeight == double.NaN)
+                throw new ArgumentException("Flow document must have a specified page height");
+            if (_flowDocument.PageWidth == double.NaN)
+                throw new ArgumentException("Flow document must have a specified page width");
 
             _dynamicCache = new ReportPaginatorDynamicCache(_flowDocument);
-            ArrayList listPageHeaders = _dynamicCache.GetFlowDocumentVisualListByType(typeof(SectionReportHeader));
-            if (listPageHeaders.Count > 1) throw new ArgumentException("Flow document can have only one report header section");
+            var listPageHeaders = _dynamicCache.GetFlowDocumentVisualListByType(typeof(SectionReportHeader));
+            if (listPageHeaders.Count > 1)
+                throw new ArgumentException("Flow document can have only one report header section");
             if (listPageHeaders.Count == 1) _blockPageHeader = (SectionReportHeader)listPageHeaders[0];
-            ArrayList listPageFooters = _dynamicCache.GetFlowDocumentVisualListByType(typeof(SectionReportFooter));
-            if (listPageFooters.Count > 1) throw new ArgumentException("Flow document can have only one report footer section");
+            var listPageFooters = _dynamicCache.GetFlowDocumentVisualListByType(typeof(SectionReportFooter));
+            if (listPageFooters.Count > 1)
+                throw new ArgumentException("Flow document can have only one report footer section");
             if (listPageFooters.Count == 1) _blockPageFooter = (SectionReportFooter)listPageFooters[0];
 
             _paginator = ((IDocumentPaginatorSource)_flowDocument).DocumentPaginator;
 
             // remove header and footer in our working copy
-            Block block = _flowDocument.Blocks.FirstBlock;
+            var block = _flowDocument.Blocks.FirstBlock;
             while (block != null)
             {
-                Block thisBlock = block;
+                var thisBlock = block;
                 block = block.NextBlock;
-                if ((thisBlock == _blockPageHeader) || (thisBlock == _blockPageFooter)) _flowDocument.Blocks.Remove(thisBlock);
+                if ((thisBlock == _blockPageHeader) || (thisBlock == _blockPageFooter))
+                    _flowDocument.Blocks.Remove(thisBlock);
             }
 
             // get report context values
@@ -90,18 +84,52 @@ namespace CodeReason.Reports
             FillData();
         }
 
-        protected void RememberAggregateValue(Dictionary<string, List<object>> aggregateValues, string aggregateGroups, object value)
+        /// <summary>
+        ///     Determines if the current page count is valid
+        /// </summary>
+        public override bool IsPageCountValid
         {
-            if (String.IsNullOrEmpty(aggregateGroups)) return;
+            get { return _paginator.IsPageCountValid; }
+        }
 
-            string[] aggregateGroupParts = aggregateGroups.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        /// <summary>
+        ///     Gets the total page count
+        /// </summary>
+        public override int PageCount
+        {
+            get { return _pageCount; }
+        }
+
+        /// <summary>
+        ///     Gets or sets the page size
+        /// </summary>
+        public override Size PageSize
+        {
+            get { return _pageSize; }
+            set { _pageSize = value; }
+        }
+
+        /// <summary>
+        ///     Gets the paginator source
+        /// </summary>
+        public override IDocumentPaginatorSource Source
+        {
+            get { return _paginator.Source; }
+        }
+
+        protected void RememberAggregateValue(Dictionary<string, List<object>> aggregateValues, string aggregateGroups,
+            object value)
+        {
+            if (string.IsNullOrEmpty(aggregateGroups)) return;
+
+            var aggregateGroupParts = aggregateGroups.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
             // remember value for aggregate functions
             List<object> aggregateValueList;
-            foreach (string aggregateGroup in aggregateGroupParts)
+            foreach (var aggregateGroup in aggregateGroupParts)
             {
-                string trimmedGroup = aggregateGroup.Trim();
-                if (String.IsNullOrEmpty(trimmedGroup)) continue;
+                var trimmedGroup = aggregateGroup.Trim();
+                if (string.IsNullOrEmpty(trimmedGroup)) continue;
                 if (!aggregateValues.TryGetValue(trimmedGroup, out aggregateValueList))
                 {
                     aggregateValueList = new List<object>();
@@ -112,7 +140,7 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Fill charts with data
+        ///     Fill charts with data
         /// </summary>
         /// <param name="charts">list of charts</param>
         /// <exception cref="InvalidProgramException">window.Content is not a FrameworkElement</exception>
@@ -124,17 +152,17 @@ namespace CodeReason.Reports
             foreach (IChart chart in charts)
             {
                 if (chart == null) continue;
-                Canvas chartCanvas = chart as Canvas;
-                if (String.IsNullOrEmpty(chart.TableName)) continue;
-                if (String.IsNullOrEmpty(chart.TableColumns)) continue;
+                var chartCanvas = chart as Canvas;
+                if (string.IsNullOrEmpty(chart.TableName)) continue;
+                if (string.IsNullOrEmpty(chart.TableColumns)) continue;
 
-                DataTable table = _data.GetDataTableByName(chart.TableName);
+                var table = _data.GetDataTableByName(chart.TableName);
                 if (table == null) continue;
 
                 if (chartCanvas != null)
                 {
                     // HACK: this here is REALLY dirty!!!
-                    IChart newChart = (IChart)chart.Clone();
+                    var newChart = (IChart)chart.Clone();
                     if (window == null)
                     {
                         window = new Window();
@@ -155,11 +183,13 @@ namespace CodeReason.Reports
                     newChart.DataColumns = chart.TableColumns.Split(',', ';');
                     newChart.UpdateChart();
 
-                    FrameworkElement windowContent = window.Content as FrameworkElement;
-                    if (windowContent == null) throw new InvalidProgramException("window.Content is not a FrameworkElement");
-                    RenderTargetBitmap bitmap = new RenderTargetBitmap((int)(windowContent.RenderSize.Width * 600d / 96d), (int)(windowContent.RenderSize.Height * 600d / 96d), 600d, 600d, PixelFormats.Pbgra32);
+                    var windowContent = window.Content as FrameworkElement;
+                    if (windowContent == null)
+                        throw new InvalidProgramException("window.Content is not a FrameworkElement");
+                    var bitmap = new RenderTargetBitmap((int)(windowContent.RenderSize.Width * 600d / 96d),
+                        (int)(windowContent.RenderSize.Height * 600d / 96d), 600d, 600d, PixelFormats.Pbgra32);
                     bitmap.Render(window);
-                    chartCanvas.Children.Add(new Image() { Source = bitmap });
+                    chartCanvas.Children.Add(new Image { Source = bitmap });
                 }
                 else
                 {
@@ -175,27 +205,34 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Fills document with data
+        ///     Fills document with data
         /// </summary>
         /// <exception cref="InvalidDataException">ReportTableRow must have a TableRowGroup as parent</exception>
         protected virtual void FillData()
         {
-            ArrayList blockDocumentValues = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(IInlineDocumentValue)); // walker.Walk<IInlineDocumentValue>(_flowDocument);
-            ArrayList blockTableRows = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(ITableRowForDataTable)); // walker.Walk<TableRowForDataTable>(_flowDocument);
-            ArrayList blockAggregateValues = _dynamicCache.GetFlowDocumentVisualListByType(typeof(InlineAggregateValue)); // walker.Walk<InlineAggregateValue>(_flowDocument);
-            ArrayList charts = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(IChart)); // walker.Walk<IChart>(_flowDocument);
-            ArrayList dynamicHeaderTableRows = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(ITableRowForDynamicHeader));
-            ArrayList dynamicDataTableRows = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(ITableRowForDynamicDataTable));
-            ArrayList documentConditions = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(IDocumentCondition));
+            var blockDocumentValues = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(IInlineDocumentValue));
+            // walker.Walk<IInlineDocumentValue>(_flowDocument);
+            var blockTableRows = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(ITableRowForDataTable));
+            var conditionalRows = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof (ITableRowConditional));
+            // walker.Walk<TableRowForDataTable>(_flowDocument);
+            var blockAggregateValues = _dynamicCache.GetFlowDocumentVisualListByType(typeof(InlineAggregateValue));
+            // walker.Walk<InlineAggregateValue>(_flowDocument);
+            var charts = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(IChart));
+            // walker.Walk<IChart>(_flowDocument);
+            var dynamicHeaderTableRows =
+                _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(ITableRowForDynamicHeader));
+            var dynamicDataTableRows =
+                _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(ITableRowForDynamicDataTable));
+            var documentConditions = _dynamicCache.GetFlowDocumentVisualListByInterface(typeof(IDocumentCondition));
 
-            List<Block> blocks = new List<Block>();
+            var blocks = new List<Block>();
             if (_blockPageHeader != null) blocks.Add(_blockPageHeader);
             if (_blockPageFooter != null) blocks.Add(_blockPageFooter);
 
-            DocumentWalker walker = new DocumentWalker();
+            var walker = new DocumentWalker();
             blockDocumentValues.AddRange(walker.TraverseBlockCollection<IInlineDocumentValue>(blocks));
 
-            Dictionary<string, List<object>> aggregateValues = new Dictionary<string, List<object>>();
+            var aggregateValues = new Dictionary<string, List<object>>();
 
             FillCharts(charts);
 
@@ -204,7 +241,7 @@ namespace CodeReason.Reports
             {
                 if (dc == null) continue;
                 dc.PerformRenderUpdate(_data);
-            }            
+            }
 
             // fill report values
             foreach (IInlineDocumentValue dv in blockDocumentValues)
@@ -218,7 +255,8 @@ namespace CodeReason.Reports
                 }
                 else
                 {
-                    if ((_data.ShowUnknownValues) && (dv.Value == null)) dv.Value = "[" + ((dv.PropertyName != null) ? dv.PropertyName : "NULL") + "]";
+                    if ((_data.ShowUnknownValues) && (dv.Value == null))
+                        dv.Value = "[" + (dv.PropertyName ?? "NULL") + "]";
                     RememberAggregateValue(aggregateValues, dv.AggregateGroup, null);
                 }
             }
@@ -226,24 +264,24 @@ namespace CodeReason.Reports
             // fill dynamic tables
             foreach (ITableRowForDynamicDataTable iTableRow in dynamicDataTableRows)
             {
-                TableRow tableRow = iTableRow as TableRow;
+                var tableRow = iTableRow as TableRow;
                 if (tableRow == null) continue;
 
-                TableRowGroup tableGroup = tableRow.Parent as TableRowGroup;
+                var tableGroup = tableRow.Parent as TableRowGroup;
                 if (tableGroup == null) continue;
 
                 TableRow currentRow;
 
-                DataTable table = _data.GetDataTableByName(iTableRow.TableName);
+                var table = _data.GetDataTableByName(iTableRow.TableName);
 
-                for (int i = 0; i < table.Rows.Count; i++)
+                for (var i = 0; i < table.Rows.Count; i++)
                 {
                     currentRow = new TableRow();
 
-                    DataRow dataRow = table.Rows[i];
-                    for (int j = 0; j < table.Columns.Count; j++)
+                    var dataRow = table.Rows[i];
+                    for (var j = 0; j < table.Columns.Count; j++)
                     {
-                        string value = dataRow[j].ToString();
+                        var value = dataRow[j].ToString();
                         currentRow.Cells.Add(new TableCell(new Paragraph(new Run(value))));
                     }
                     tableGroup.Rows.Add(currentRow);
@@ -252,35 +290,56 @@ namespace CodeReason.Reports
 
             foreach (ITableRowForDynamicHeader iTableRow in dynamicHeaderTableRows)
             {
-                TableRow tableRow = iTableRow as TableRow;
+                var tableRow = iTableRow as TableRow;
                 if (tableRow == null) continue;
 
-                DataTable table = _data.GetDataTableByName(iTableRow.TableName);
+                var table = _data.GetDataTableByName(iTableRow.TableName);
 
                 foreach (DataRow row in table.Rows)
                 {
-                    string value = row[0].ToString();
-                    TableCell tableCell = new TableCell(new Paragraph(new Run(value)));
+                    var value = row[0].ToString();
+                    var tableCell = new TableCell(new Paragraph(new Run(value)));
                     tableRow.Cells.Add(tableCell);
                 }
+            }
 
+            foreach (ITableRowConditional row in conditionalRows)
+            {
+                var tableRow = row as TableRow;
+                if (tableRow == null) continue;
+
+                var rowGroup = tableRow.Parent as TableRowGroup;
+                if (rowGroup == null) continue;
+
+                //if (row.Visible == false)
+                //{
+                //    rowGroup.Rows.Remove(tableRow);
+                //}
+
+                var table = _data.GetDataTableByName(row.TableName);
+                if (table == null)
+                {
+                    rowGroup.Rows.Remove(tableRow);
+                }
             }
 
             // group table row groups
-            Dictionary<TableRowGroup, List<TableRow>> groupedRows = new Dictionary<TableRowGroup, List<TableRow>>();
-            Dictionary<TableRowGroup, string> tableNames = new Dictionary<TableRowGroup, string>();
+            var groupedRows = new Dictionary<TableRowGroup, List<TableRow>>();
+            var tableNames = new Dictionary<TableRowGroup, string>();
             foreach (TableRow tableRow in blockTableRows)
             {
-                TableRowGroup rowGroup = tableRow.Parent as TableRowGroup;
+                var rowGroup = tableRow.Parent as TableRowGroup;
                 if (rowGroup == null) continue;
 
-                ITableRowForDataTable iTableRow = tableRow as ITableRowForDataTable;
+                var iTableRow = tableRow as ITableRowForDataTable;
                 if ((iTableRow != null) && (iTableRow.TableName != null))
                 {
                     string tableName;
                     if (tableNames.TryGetValue(rowGroup, out tableName))
                     {
-                        if (tableName != iTableRow.TableName.Trim().ToLowerInvariant()) throw new ReportingException("TableRowGroup cannot be mapped to different DataTables in TableRowForDataTable");
+                        if (tableName != iTableRow.TableName.Trim().ToLowerInvariant())
+                            throw new ReportingException(
+                                "TableRowGroup cannot be mapped to different DataTables in TableRowForDataTable");
                     }
                     else tableNames[rowGroup] = iTableRow.TableName.Trim().ToLowerInvariant();
                 }
@@ -295,27 +354,27 @@ namespace CodeReason.Reports
             }
 
             // fill tables
-            foreach (KeyValuePair<TableRowGroup, List<TableRow>> groupedRow in groupedRows)
+            foreach (var groupedRow in groupedRows)
             {
-                TableRowGroup rowGroup = groupedRow.Key;
+                var rowGroup = groupedRow.Key;
 
-                ITableRowForDataTable iTableRow = groupedRow.Value[0] as ITableRowForDataTable;
+                var iTableRow = groupedRow.Value[0] as ITableRowForDataTable;
                 if (iTableRow == null) continue;
 
-                DataTable table = _data.GetDataTableByName(iTableRow.TableName);
+                var table = _data.GetDataTableByName(iTableRow.TableName);
                 if (table == null)
                 {
                     if (_data.ShowUnknownValues)
                     {
                         // show unknown values
-                        foreach (TableRow tableRow in groupedRow.Value)
-                            foreach (TableCell cell in tableRow.Cells)
+                        foreach (var tableRow in groupedRow.Value)
+                            foreach (var cell in tableRow.Cells)
                             {
-                                DocumentWalker localWalker = new DocumentWalker();
-                                List<ITableCellValue> tableCells = localWalker.TraverseBlockCollection<ITableCellValue>(cell.Blocks);
-                                foreach (ITableCellValue cv in tableCells)
+                                var localWalker = new DocumentWalker();
+                                var tableCells = localWalker.TraverseBlockCollection<ITableCellValue>(cell.Blocks);
+                                foreach (var cv in tableCells)
                                 {
-                                    IPropertyValue dv = cv as IPropertyValue;
+                                    var dv = cv as IPropertyValue;
                                     if (dv == null) continue;
                                     dv.Value = "[" + dv.PropertyName + "]";
                                     RememberAggregateValue(aggregateValues, cv.AggregateGroup, null);
@@ -326,27 +385,27 @@ namespace CodeReason.Reports
                 }
                 else
                 {
-                    List<TableRow> listNewRows = new List<TableRow>();
+                    var listNewRows = new List<TableRow>();
                     TableRow newTableRow;
 
                     // clone XAML rows
-                    List<string> clonedRows = new List<string>();
-                    foreach (TableRow row in rowGroup.Rows)
+                    var clonedRows = new List<string>();
+                    foreach (var row in rowGroup.Rows)
                     {
-                        TableRowForDataTable reportTableRow = row as TableRowForDataTable;
+                        var reportTableRow = row as TableRowForDataTable;
                         if (reportTableRow == null) clonedRows.Add(null);
                         clonedRows.Add(XamlWriter.Save(reportTableRow));
                     }
 
-                    for (int i = 0; i < table.Rows.Count; i++)
+                    for (var i = 0; i < table.Rows.Count; i++)
                     {
-                        DataRow dataRow = table.Rows[i];
+                        var dataRow = table.Rows[i];
 
-                        for (int j = 0; j < rowGroup.Rows.Count; j++)
+                        for (var j = 0; j < rowGroup.Rows.Count; j++)
                         {
-                            TableRow row = rowGroup.Rows[j];
+                            var row = rowGroup.Rows[j];
 
-                            TableRowForDataTable reportTableRow = row as TableRowForDataTable;
+                            var reportTableRow = row as TableRowForDataTable;
                             if (reportTableRow == null)
                             {
                                 // clone regular row
@@ -357,17 +416,17 @@ namespace CodeReason.Reports
                                 // clone ReportTableRows
                                 newTableRow = (TableRow)XamlHelper.LoadXamlFromString(clonedRows[j]);
 
-                                foreach (TableCell cell in newTableRow.Cells)
+                                foreach (var cell in newTableRow.Cells)
                                 {
-                                    DocumentWalker localWalker = new DocumentWalker();
-                                    List<ITableCellValue> newCells = localWalker.TraverseBlockCollection<ITableCellValue>(cell.Blocks);
-                                    foreach (ITableCellValue cv in newCells)
+                                    var localWalker = new DocumentWalker();
+                                    var newCells = localWalker.TraverseBlockCollection<ITableCellValue>(cell.Blocks);
+                                    foreach (var cv in newCells)
                                     {
-                                        IPropertyValue dv = cv as IPropertyValue;
+                                        var dv = cv as IPropertyValue;
                                         if (dv == null) continue;
                                         try
                                         {
-                                            object obj = dataRow[dv.PropertyName];
+                                            var obj = dataRow[dv.PropertyName];
                                             if (obj == DBNull.Value) obj = null;
                                             dv.Value = obj;
 
@@ -375,7 +434,8 @@ namespace CodeReason.Reports
                                         }
                                         catch
                                         {
-                                            if (_data.ShowUnknownValues) dv.Value = "[" + dv.PropertyName + "]"; else dv.Value = "";
+                                            if (_data.ShowUnknownValues) dv.Value = "[" + dv.PropertyName + "]";
+                                            else dv.Value = "";
                                             RememberAggregateValue(aggregateValues, cv.AggregateGroup, null);
                                         }
                                     }
@@ -383,21 +443,26 @@ namespace CodeReason.Reports
                                 listNewRows.Add(newTableRow);
 
                                 // fire event
-                                _report.FireEventDataRowBoundEventArgs(new DataRowBoundEventArgs(_report, dataRow) { TableName = dataRow.Table.TableName, TableRow = newTableRow });
+                                _report.FireEventDataRowBoundEventArgs(new DataRowBoundEventArgs(_report, dataRow)
+                                {
+                                    TableName = dataRow.Table.TableName,
+                                    TableRow = newTableRow
+                                });
                             }
                         }
                     }
                     rowGroup.Rows.Clear();
-                    foreach (TableRow row in listNewRows) rowGroup.Rows.Add(row);
+                    foreach (var row in listNewRows) rowGroup.Rows.Add(row);
                 }
             }
 
             // fill aggregate values
             foreach (InlineAggregateValue av in blockAggregateValues)
             {
-                if (String.IsNullOrEmpty(av.AggregateGroup)) continue;
+                if (string.IsNullOrEmpty(av.AggregateGroup)) continue;
 
-                string[] aggregateGroups = av.AggregateGroup.Split(new char[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                var aggregateGroups = av.AggregateGroup.Split(new[] { ',', ';', ' ' },
+                    StringSplitOptions.RemoveEmptyEntries);
 
                 foreach (var group in aggregateGroups)
                 {
@@ -412,7 +477,7 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Clones a visual block
+        ///     Clones a visual block
         /// </summary>
         /// <param name="block">block to be cloned</param>
         /// <param name="pageNumber">current page number</param>
@@ -420,25 +485,25 @@ namespace CodeReason.Reports
         /// <exception cref="InvalidProgramException">Error cloning XAML block</exception>
         private ContainerVisual CloneVisualBlock(Block block, int pageNumber)
         {
-            FlowDocument tmpDoc = new FlowDocument();
+            var tmpDoc = new FlowDocument();
             tmpDoc.ColumnWidth = double.PositiveInfinity;
             tmpDoc.PageHeight = _report.PageHeight;
             tmpDoc.PageWidth = _report.PageWidth;
             tmpDoc.PagePadding = new Thickness(0);
 
-            string xaml = XamlWriter.Save(block);
-            Block newBlock = XamlReader.Parse(xaml) as Block;
+            var xaml = XamlWriter.Save(block);
+            var newBlock = XamlReader.Parse(xaml) as Block;
             if (newBlock == null) throw new InvalidProgramException("Error cloning XAML block");
             tmpDoc.Blocks.Add(newBlock);
 
-            DocumentWalker walkerBlock = new DocumentWalker();
-            ArrayList blockValues = new ArrayList();
+            var walkerBlock = new DocumentWalker();
+            var blockValues = new ArrayList();
             blockValues.AddRange(walkerBlock.Walk<IInlineContextValue>(tmpDoc));
 
             // fill context values
             FillContextValues(blockValues, pageNumber);
 
-            DocumentPage dp = ((IDocumentPaginatorSource)tmpDoc).DocumentPaginator.GetPage(0);
+            var dp = ((IDocumentPaginatorSource)tmpDoc).DocumentPaginator.GetPage(0);
             return (ContainerVisual)dp.Visual;
         }
 
@@ -448,10 +513,12 @@ namespace CodeReason.Reports
             foreach (IInlineContextValue cv in list)
             {
                 if (cv == null) continue;
-                ReportContextValueType? reportContextValueType = ReportPaginatorStaticCache.GetReportContextValueTypeByName(cv.PropertyName);
+                var reportContextValueType = ReportPaginatorStaticCache.GetReportContextValueTypeByName(cv.PropertyName);
                 if (reportContextValueType == null)
                 {
-                    if (_data.ShowUnknownValues) cv.Value = "<" + ((cv.PropertyName != null) ? cv.PropertyName : "NULL") + ">"; else cv.Value = "";
+                    if (_data.ShowUnknownValues)
+                        cv.Value = "<" + (cv.PropertyName ?? "NULL") + ">";
+                    else cv.Value = "";
                 }
                 else
                 {
@@ -475,13 +542,13 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// This is most important method, modifies the original 
+        ///     This is most important method, modifies the original
         /// </summary>
         /// <param name="pageNumber">page number</param>
         /// <returns></returns>
         public override DocumentPage GetPage(int pageNumber)
         {
-            for (int i = 0; i < 2; i++) // do it twice because filling context values could change the page count
+            for (var i = 0; i < 2; i++) // do it twice because filling context values could change the page count
             {
                 // compute page count
                 if (pageNumber == 0)
@@ -494,17 +561,17 @@ namespace CodeReason.Reports
                 FillContextValues(_reportContextValues, pageNumber + 1);
             }
 
-            DocumentPage page = _paginator.GetPage(pageNumber);
+            var page = _paginator.GetPage(pageNumber);
             if (page == DocumentPage.Missing) return DocumentPage.Missing; // page missing
 
             _pageSize = page.Size;
 
             // add header block
-            ContainerVisual newPage = new ContainerVisual();
+            var newPage = new ContainerVisual();
 
             if (_blockPageHeader != null)
             {
-                ContainerVisual v = CloneVisualBlock(_blockPageHeader, pageNumber + 1);
+                var v = CloneVisualBlock(_blockPageHeader, pageNumber + 1);
                 v.Offset = new Vector(0, 0);
                 newPage.Children.Add(v);
             }
@@ -512,7 +579,7 @@ namespace CodeReason.Reports
             // TODO: process ReportContextValues
 
             // add content page
-            ContainerVisual smallerPage = new ContainerVisual();
+            var smallerPage = new ContainerVisual();
             smallerPage.Offset = new Vector(0, _report.PageHeaderHeight / 100d * _report.PageHeight);
             smallerPage.Children.Add(page.Visual);
             newPage.Children.Add(smallerPage);
@@ -520,57 +587,37 @@ namespace CodeReason.Reports
             // add footer block
             if (_blockPageFooter != null)
             {
-                ContainerVisual v = CloneVisualBlock(_blockPageFooter, pageNumber + 1);
+                var v = CloneVisualBlock(_blockPageFooter, pageNumber + 1);
                 v.Offset = new Vector(0, _report.PageHeight - _report.PageFooterHeight / 100d * _report.PageHeight);
                 newPage.Children.Add(v);
             }
 
             // create modified BleedBox
-            Rect bleedBox = new Rect(page.BleedBox.Left, page.BleedBox.Top, page.BleedBox.Width,
+            var bleedBox = new Rect(page.BleedBox.Left, page.BleedBox.Top, page.BleedBox.Width,
                 _report.PageHeight - (page.Size.Height - page.BleedBox.Size.Height));
 
             // create modified ContentBox
-            Rect contentBox = new Rect(page.ContentBox.Left, page.ContentBox.Top, page.ContentBox.Width,
+            var contentBox = new Rect(page.ContentBox.Left, page.ContentBox.Top, page.ContentBox.Width,
                 _report.PageHeight - (page.Size.Height - page.ContentBox.Size.Height));
 
-            DocumentPage dp = new DocumentPage(newPage, new Size(_report.PageWidth, _report.PageHeight), bleedBox, contentBox);
+            var dp = new DocumentPage(newPage, new Size(_report.PageWidth, _report.PageHeight), bleedBox, contentBox);
             _report.FireEventGetPageCompleted(new GetPageCompletedEventArgs(page, pageNumber, null, false, null));
             return dp;
         }
 
+        // ReSharper disable InconsistentNaming
         /// <summary>
-        /// Determines if the current page count is valid
+        ///     Reference to a original flowdoc paginator
         /// </summary>
-        public override bool IsPageCountValid
-        {
-            get { return _paginator.IsPageCountValid; }
-        }
+        protected DocumentPaginator _paginator;
 
-        private int _pageCount;
-        /// <summary>
-        /// Gets the total page count
-        /// </summary>
-        public override int PageCount
-        {
-            get { return _pageCount; }
-        }
-
-        private Size _pageSize = Size.Empty;
-        /// <summary>
-        /// Gets or sets the page size
-        /// </summary>
-        public override Size PageSize
-        {
-            get { return _pageSize; }
-            set { _pageSize = value; }
-        }
-
-        /// <summary>
-        /// Gets the paginator source
-        /// </summary>
-        public override IDocumentPaginatorSource Source
-        {
-            get { return _paginator.Source; }
-        }
+        protected FlowDocument _flowDocument;
+        protected ReportDocument _report;
+        protected ReportData _data;
+        protected Block _blockPageHeader;
+        protected Block _blockPageFooter;
+        protected ArrayList _reportContextValues;
+        protected ReportPaginatorDynamicCache _dynamicCache;
+        // ReSharper restore InconsistentNaming
     }
 }

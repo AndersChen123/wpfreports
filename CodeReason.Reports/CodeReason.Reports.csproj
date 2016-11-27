@@ -67,6 +67,7 @@
     <Compile Include="Controls\ThreadedVisualHost.cs" />
     <Compile Include="Controls\BusyDecorator.cs" />
     <Compile Include="Controls\VisualTargetPresentationSource.cs" />
+    <Compile Include="Document\TableRowConditional.cs" />
     <Compile Include="Document\InlineAggregateValue.cs" />
     <Compile Include="Document\SectionReportFooter.cs" />
     <Compile Include="Document\SectionDataGroup.cs" />
@@ -76,6 +77,7 @@
     <Compile Include="Document\TextBlockDocumentConditional.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="ImageErrorEventArgs.cs" />
+    <Compile Include="Interfaces\ITableRowConditional.cs" />
     <Compile Include="Interfaces\IDocumentCondition.cs" />
     <Compile Include="Interfaces\ITableRowForDataTable.cs" />
     <Compile Include="Interfaces\ITableRowForDynamicDataTable.cs" />

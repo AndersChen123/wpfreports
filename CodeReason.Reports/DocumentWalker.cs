@@ -10,40 +10,35 @@
  ************************************************************************/
 
 using System.Collections.Generic;
-using System.Windows.Documents;
 using System.Windows.Controls;
+using System.Windows.Documents;
 
 namespace CodeReason.Reports
 {
     /// <summary>
-    /// THe delegate type of the event that will be raised
+    ///     THe delegate type of the event that will be raised
     /// </summary>
     public delegate void DocumentVisitedEventHandler(object sender, object visitedObject, bool start);
 
     /// <summary>
-    /// The Document walker class enables a traversal of the flow document tree and raises an event for each node 
-    /// in the document tree. I used it to find all instances of a FormattedRun control in the flowdocument defintion. 
-    /// It is pretty straightforward, so I will just show the code itself. 
+    ///     The Document walker class enables a traversal of the flow document tree and raises an event for each node
+    ///     in the document tree. I used it to find all instances of a FormattedRun control in the flowdocument defintion.
+    ///     It is pretty straightforward, so I will just show the code itself.
     /// </summary>
     public class DocumentWalker
     {
-        private object _tag;
         /// <summary>
-        /// Gets or sets the tag associated to this walker
+        ///     Gets or sets the tag associated to this walker
         /// </summary>
-        public object Tag
-        {
-            get { return _tag; }
-            set { _tag = value; }
-        }
+        public object Tag { get; set; }
 
         /// <summary>
-        /// This is the event to hook on.
+        ///     This is the event to hook on.
         /// </summary>
         public event DocumentVisitedEventHandler VisualVisited;
 
         /// <summary>
-        /// Traverses whole document
+        ///     Traverses whole document
         /// </summary>
         /// <param name="fd">FlowDocument</param>
         /// <returns>list of inlines</returns>
@@ -53,7 +48,7 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Traverses whole document
+        ///     Traverses whole document
         /// </summary>
         /// <param name="fd">FlowDocument</param>
         /// <returns>list of inlines</returns>
@@ -63,21 +58,21 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Traverses an InlineCollection
+        ///     Traverses an InlineCollection
         /// </summary>
         /// <param name="inlines">InlineCollection to be traversed</param>
         /// <returns>list of inlines</returns>
         public List<T> TraverseInlines<T>(InlineCollection inlines) where T : class
         {
-            List<T> res = new List<T>();
+            var res = new List<T>();
             if (inlines != null && inlines.Count > 0)
             {
-                Inline il = inlines.FirstInline;
+                var il = inlines.FirstInline;
                 while (il != null)
                 {
                     if (il is T) res.Add(il as T);
 
-                    Run r = il as Run;
+                    var r = il as Run;
                     if (r != null)
                     {
                         if (VisualVisited != null) VisualVisited(this, r, true);
@@ -85,31 +80,31 @@ namespace CodeReason.Reports
                         continue;
                     }
 
-                    
-                    Span sp = il as Span;
+
+                    var sp = il as Span;
                     if (sp != null)
                     {
-                        if (VisualVisited != null) 
+                        if (VisualVisited != null)
                             VisualVisited(this, sp, true);
 
                         res.AddRange(TraverseInlines<T>(sp.Inlines));
                         il = il.NextInline;
                         continue;
                     }
-                                                            
-                    InlineUIContainer uc = il as InlineUIContainer;                  
+
+                    var uc = il as InlineUIContainer;
                     if (uc != null && uc.Child != null)
                     {
                         if (VisualVisited != null) VisualVisited(this, uc.Child, true);
                         if (uc.Child is T) res.Add(uc.Child as T);
-                        TextBlock tb = uc.Child as TextBlock;
-                        if (tb != null) 
-                            res.AddRange(TraverseInlines<T>(tb.Inlines));                        
+                        var tb = uc.Child as TextBlock;
+                        if (tb != null)
+                            res.AddRange(TraverseInlines<T>(tb.Inlines));
 
                         il = il.NextInline;
                         continue;
                     }
-                    Figure fg = il as Figure;                    
+                    var fg = il as Figure;
                     if (fg != null)
                     {
                         if (VisualVisited != null) VisualVisited(this, fg, true);
@@ -121,9 +116,9 @@ namespace CodeReason.Reports
             return res;
         }
 
-     
+
         /// <summary>
-        /// Traverses only passed paragraph
+        ///     Traverses only passed paragraph
         /// </summary>
         /// <param name="p">paragraph</param>
         /// <returns>list of inlines</returns>
@@ -133,15 +128,14 @@ namespace CodeReason.Reports
         }
 
         /// <summary>
-        /// Traverses passed block collection
+        ///     Traverses passed block collection
         /// </summary>
         /// <param name="blocks">blocks to be traversed</param>
         /// <returns>list of inlines</returns>
-        ///    
         public List<T> TraverseBlockCollection<T>(IEnumerable<Block> blocks) where T : class
         {
-            List<T> res = new List<T>();
-            foreach (Block b in blocks)
+            var res = new List<T>();
+            foreach (var b in blocks)
             {
                 if (b is T)
                 {
@@ -149,7 +143,7 @@ namespace CodeReason.Reports
                     res.Add(b as T);
                 }
 
-                Paragraph p = b as Paragraph;
+                var p = b as Paragraph;
                 if (p != null)
                 {
                     if (VisualVisited != null) VisualVisited(this, p, true);
@@ -157,41 +151,40 @@ namespace CodeReason.Reports
                     continue;
                 }
 
-                BlockUIContainer bui = b as BlockUIContainer;
+                var bui = b as BlockUIContainer;
                 if (bui != null)
                 {
                     if (VisualVisited != null) VisualVisited(this, bui.Child, true);
                     continue;
                 }
 
-                Section s = b as Section;
+                var s = b as Section;
                 if (s != null)
                 {
                     if (VisualVisited != null) VisualVisited(this, s, true);
                     res.AddRange(TraverseBlockCollection<T>(s.Blocks));
                     continue;
                 }
-         
-                Table t = b as Table;
+
+                var t = b as Table;
                 if (t != null)
                 {
                     if (VisualVisited != null) VisualVisited(this, t, true);
-                    foreach (TableRowGroup trg in t.RowGroups)
+                    foreach (var trg in t.RowGroups)
                     {
                         if (VisualVisited != null) VisualVisited(this, trg, true);
-                        foreach (TableRow tr in trg.Rows)
+                        foreach (var tr in trg.Rows)
                         {
                             if (VisualVisited != null) VisualVisited(this, tr, true);
                             if (tr is T) res.Add(tr as T);
 
-                            foreach (TableCell tc in tr.Cells)
+                            foreach (var tc in tr.Cells)
                             {
                                 if (VisualVisited != null) VisualVisited(this, tc, true);
                                 res.AddRange(TraverseBlockCollection<T>(tc.Blocks));
                             }
                         }
                     }
-                    continue;
                 }
             }
             return res;
